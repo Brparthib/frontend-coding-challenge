@@ -12,11 +12,11 @@ import {
 const CONTEXT_ERROR =
   "useUserAgentContext must be used within a UserAgentProvider";
 
-type UserAgent = string;
+type UserAgent = string | null;
 
 type UserAgentContextType = {
-  userAgent: UserAgent | undefined;
-  setUserAgent: (userAgent: UserAgent | undefined) => void;
+  userAgent: UserAgent;
+  setUserAgent: (userAgent: UserAgent) => void;
 };
 
 type UserAgentProviderProps = {
@@ -38,16 +38,26 @@ export const useUserAgentContext = (): UserAgentContextType => {
 
 export const UserAgentProvider: React.FC<UserAgentProviderProps> = ({
   children,
-  userAgent: userAgentProp,
+  userAgent: userAgentFromServer,
 }) => {
-  const [userAgent, setUserAgent] = useState<UserAgent | undefined>(
-    userAgentProp
+  const [userAgent, setUserAgent] = useState<UserAgent>(
+    userAgentFromServer || null
   );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setUserAgent(window.navigator.userAgent);
-  }, []);
+
+    if (!userAgent) {
+      const savedUserAgent = localStorage.getItem("userAgent");
+      if (savedUserAgent) {
+        setUserAgent(savedUserAgent);
+      } else {
+        const currentUserAgent = window.navigator.userAgent;
+        setUserAgent(currentUserAgent);
+        localStorage.setItem("userAgent", currentUserAgent);
+      }
+    }
+  }, [userAgent]);
 
   const value = useMemo<UserAgentContextType>(
     () => ({
